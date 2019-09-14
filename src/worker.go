@@ -1,6 +1,8 @@
 package gotapper
 
 import (
+	"bytes"
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -14,7 +16,7 @@ const (
 
 type order struct {
 	action       int
-	workerConfig config
+	workerConfig Config
 }
 
 func worker(orderChannel chan order) {
@@ -34,13 +36,13 @@ func worker(orderChannel chan order) {
 	}
 }
 
-func executeOrder(order order) (bool, string) {
+func executeOrder(order order) (bool, error) {
 	errorString := "Method unknown"
 	switch order.workerConfig.Method {
 	case http.MethodGet:
-		fmt.Println("this is a get")
+		fmt.Println("get")
 	case http.MethodPut:
-		fmt.Println("toto")
+		fmt.Println("put")
 	case http.MethodPost:
 		fmt.Println("post")
 	case http.MethodPatch:
@@ -49,5 +51,33 @@ func executeOrder(order order) (bool, string) {
 		fmt.Println("delete")
 	}
 
-	return false, errorString
+	return false, errors.New(errorString)
+}
+
+func retryPostUntil200(reqDef RequestDef, resChan chan RequestResult) {
+	for i := 1; i <= reqDef.Retries; i++ {
+		resp, err := http.Post(reqDef.Url, reqDef.ContentType, bytes.NewBuffer([]byte(reqDef.Body)))
+		if err != nil {
+			if i == reqDef.Retries {
+				resChan <- RequestResult{StatusCode: resp.StatusCode, Error: err, Name: reqDef.Name}
+			}
+			continue
+		}
+		resChan <- RequestResult{StatusCode: resp.StatusCode, Error: nil, Name: reqDef.Name}
+	}
+}
+
+func executeCallBacks(requests []RequestDef) []RequestResult {
+	resultChan := make(chan RequestResult)
+	defer close(resultChan)
+	resultSlice := make([]RequestResult, len(requests))
+	for _, v := range requests {
+		go retryPostUntil200(v, resultChan)
+	}
+
+	for i := 0; i < len(requests); i++ {
+		resultSlice[i] = <-resultChan
+	}
+
+	return resultSlice
 }
