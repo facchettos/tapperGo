@@ -16,12 +16,12 @@ func readConfigFile(fileName string) ([]byte, error) {
 	}
 }
 
-func parse(fileName string) (config, error) {
+func parse(fileName string) (Config, error) {
 	fileBytes, err := readConfigFile(fileName)
 	if err != nil {
-		return config{}, err
+		return Config{}, err
 	}
-	configFromFile := config{}
+	configFromFile := Config{}
 	if err = yaml.Unmarshal(fileBytes, &configFromFile); err != nil {
 		return configFromFile, nil
 	}
