@@ -38,22 +38,21 @@ func worker(orderChannel chan order) {
 
 func executeOrder(order order) (bool, error) {
 	errorString := "Method unknown"
-	var statusCode int
-	var respBody []byte
+	var response *http.Response
 	var err error
 	switch order.WorkerConfig.Method {
 	case http.MethodGet:
-		statusCode, respBody, err = executeGet(order)
+		response, err = executeGet(order)
 	case http.MethodPut:
-		statusCode, respBody, err = executeRequest(order)
+		response, err = executeRequest(order)
 	case http.MethodPost:
-		statusCode, respBody, err = executePost(order)
+		response, err = executePost(order)
 	case http.MethodPatch:
-		statusCode, respBody, err = executePost(order)
+		response, err = executePost(order)
 	case http.MethodDelete:
-		statusCode, respBody, err = executeRequest(order)
+		response, err = executeRequest(order)
 	}
-	fmt.Println(statusCode, respBody, err)
+	fmt.Println(response, err)
 	return false, errors.New(errorString)
 }
 
