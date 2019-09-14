@@ -2,7 +2,6 @@ package gotapper
 
 import (
 	"bytes"
-	"io/ioutil"
 	"net/http"
 )
 
@@ -10,34 +9,22 @@ func createUrlFromOrder(order order) string {
 	return order.WorkerConfig.URL
 }
 
-func executeGet(order order) (int, []byte, error) {
+func executeGet(order order) (*http.Response, error) {
 	effectiveUrl := createUrlFromOrder(order)
 
 	resp, err := http.Get(effectiveUrl)
-	if err != nil {
-		return 0, nil, err
-	}
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return 0, nil, err
-	}
-	return resp.StatusCode, body, nil
+	return resp, err
 }
 
-func executePost(order order) (int, []byte, error) {
+func executePost(order order) (*http.Response, error) {
 	effectiveUrl := createUrlFromOrder(order)
 
 	postBody := bytes.NewBuffer([]byte(order.WorkerConfig.Body))
 	resp, err := http.Post(effectiveUrl, order.WorkerConfig.ContentType, postBody)
-
-	if err != nil {
-		return 0, nil, err
-	}
-	body, err := ioutil.ReadAll(resp.Body)
-	return resp.StatusCode, body, nil
+	return resp, err
 }
 
-func executeRequest(order order) (int, []byte, error) {
+func executeRequest(order order) (*http.Response, error) {
 	client := &http.Client{}
 	effectiveUrl := createUrlFromOrder(order)
 	method := order.WorkerConfig.Method
@@ -48,14 +35,8 @@ func executeRequest(order order) (int, []byte, error) {
 	}
 	req, err := http.NewRequest(order.WorkerConfig.Method, effectiveUrl, reqBody)
 	if err != nil {
-		return 0, nil, err
+		return nil, err
 	}
 	resp, err := client.Do(req)
-
-	if err != nil {
-		return 0, nil, err
-	}
-
-	body, _ := ioutil.ReadAll(resp.Body)
-	return resp.StatusCode, body, nil
+	return resp, nil
 }

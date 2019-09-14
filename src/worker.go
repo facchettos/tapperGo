@@ -3,6 +3,7 @@ package gotapper
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"net/http"
 	"time"
 )
@@ -37,19 +38,22 @@ func worker(orderChannel chan order) {
 
 func executeOrder(order order) (bool, error) {
 	errorString := "Method unknown"
+	var statusCode int
+	var respBody []byte
+	var err error
 	switch order.WorkerConfig.Method {
 	case http.MethodGet:
-		executeGet(order)
+		statusCode, respBody, err = executeGet(order)
 	case http.MethodPut:
-		executeRequest(order)
+		statusCode, respBody, err = executeRequest(order)
 	case http.MethodPost:
-		executePost(order)
+		statusCode, respBody, err = executePost(order)
 	case http.MethodPatch:
-		executePost(order)
+		statusCode, respBody, err = executePost(order)
 	case http.MethodDelete:
-		executeRequest(order)
+		statusCode, respBody, err = executeRequest(order)
 	}
-
+	fmt.Println(statusCode, respBody, err)
 	return false, errors.New(errorString)
 }
 
@@ -79,4 +83,34 @@ func executeCallBacks(requests []RequestDef) []RequestResult {
 	}
 
 	return resultSlice
+}
+
+func checkSuccess(conditions ConditionDef, response *http.Response) bool {
+	if !checkStatus(conditions, response) {
+		return false
+	}
+	//TODO finish the function
+	return false
+}
+
+func checkStatus(conditions ConditionDef, response *http.Response) bool {
+	if conditions.ExpectedStatus != response.StatusCode {
+		return false
+	}
+	return true
+
+}
+
+func checkBody(conditions ConditionDef, response *http.Response, expected interface{}) bool {
+	switch conditions.Condition {
+	case "in":
+		fmt.Println("in")
+	case "and":
+		fmt.Println("and")
+	case "equals":
+		fmt.Println("equals")
+	case "not":
+		fmt.Println("not")
+	}
+	return true
 }

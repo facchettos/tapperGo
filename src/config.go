@@ -29,6 +29,7 @@ type RequestResult struct {
 type ConditionDef struct {
 	Condition      string        `yaml:"condition"`
 	FieldSelector  FieldSelector `yaml:"field_selector"`
+	ExpectedStatus int           `yaml:"expected_status"`
 	ExpectedType   string        `yaml:"expected_type"`
 	ExpectedString string        `yaml:"expected_string,omitempty"`
 	ExpectedInt    int           `yaml:"expected_int,omitempty"`
