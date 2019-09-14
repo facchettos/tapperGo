@@ -3,7 +3,6 @@ package gotapper
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"net/http"
 	"time"
 )
@@ -15,8 +14,8 @@ const (
 )
 
 type order struct {
-	action       int
-	workerConfig Config
+	Action       int
+	WorkerConfig Config
 }
 
 func worker(orderChannel chan order) {
@@ -25,12 +24,12 @@ func worker(orderChannel chan order) {
 	for {
 		select {
 		case order := <-orderChannel:
-			if order.action == Stop {
+			if order.Action == Stop {
 				break
-			} else if order.action == 2 {
+			} else if order.Action == 2 {
 				configFromChannel = order
 			}
-		case <-time.After(time.Duration(configFromChannel.workerConfig.Tick) * time.Second):
+		case <-time.After(time.Duration(configFromChannel.WorkerConfig.Tick) * time.Second):
 			executeOrder(configFromChannel)
 		}
 	}
@@ -38,17 +37,17 @@ func worker(orderChannel chan order) {
 
 func executeOrder(order order) (bool, error) {
 	errorString := "Method unknown"
-	switch order.workerConfig.Method {
+	switch order.WorkerConfig.Method {
 	case http.MethodGet:
-		fmt.Println("get")
+		executeGet(order)
 	case http.MethodPut:
-		fmt.Println("put")
+		executeRequest(order)
 	case http.MethodPost:
-		fmt.Println("post")
+		executePost(order)
 	case http.MethodPatch:
-		fmt.Println("patch")
+		executePost(order)
 	case http.MethodDelete:
-		fmt.Println("delete")
+		executeRequest(order)
 	}
 
 	return false, errors.New(errorString)

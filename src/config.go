@@ -6,6 +6,8 @@ type Config struct {
 	Arguments           map[string]string `yaml:"arguments"`
 	Tick                int               `yaml:"tick"`
 	Method              string            `yaml:"method"`
+	ContentType         string            `yaml:"content_type"`
+	Body                string            `yaml:"body"`
 	CallBackUrlsSuccess []RequestDef      `yaml:"call_back_urls"`
 	CallBackUrlsFailure []RequestDef      `yaml:"call_back_urls_failure"`
 }
