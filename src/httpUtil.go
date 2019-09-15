@@ -4,27 +4,41 @@ import (
 	"bytes"
 	"io/ioutil"
 	"net/http"
+	"strings"
 	"time"
 )
 
-func createClient(config Config) http.Client {
+func createClient(config TestDefinition) http.Client {
 	return http.Client{
-		Timeout: time.Duration(config.Conditions[0].ExpectedDuration) * time.Second,
+		Timeout: time.Duration(config.ExpectedDuration) * time.Second,
 	}
 }
 
-func createUrlFromOrder(order Config) string {
-	return order.URL
+//takes the request definition and builds the url with the parameters
+func createUrlFromOrder(order TestDefinition) string {
+	var builder strings.Builder
+	builder.WriteString(order.URL)
+	builder.WriteString("?")
+	counter := 0
+	length := len(order.Arguments)
+	for k, v := range order.Arguments {
+		builder.WriteString(k + "=" + v)
+		if counter != length-1 {
+			builder.WriteString("&")
+		}
+		counter++
+	}
+	return builder.String()
 }
 
-func executeGet(order Config) (*http.Response, error) {
+func executeGet(order TestDefinition) (*http.Response, error) {
 	effectiveUrl := createUrlFromOrder(order)
 	client := createClient(order)
 	resp, err := client.Get(effectiveUrl)
 	return resp, err
 }
 
-func executePost(order Config) (*http.Response, error) {
+func executePost(order TestDefinition) (*http.Response, error) {
 	effectiveUrl := createUrlFromOrder(order)
 
 	client := createClient(order)
@@ -33,7 +47,7 @@ func executePost(order Config) (*http.Response, error) {
 	return resp, err
 }
 
-func executeRequest(order Config) (*http.Response, error) {
+func executeRequest(order TestDefinition) (*http.Response, error) {
 	client := createClient(order)
 	effectiveUrl := createUrlFromOrder(order)
 	method := order.Method

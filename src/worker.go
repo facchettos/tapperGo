@@ -1,20 +1,16 @@
 package gotapper
 
 import (
-	"bytes"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
-	"reflect"
-	"strings"
 	"time"
 )
 
 const (
-	Start  int = 0
-	Stop   int = 1
-	Reload int = 2
+	Start   int = 0
+	Stop    int = 1
+	Restart int = 2
 )
 
 type order struct {
@@ -22,28 +18,32 @@ type order struct {
 	WorkerConfig Config
 }
 
-func worker(orderChannel chan order) {
-	configFromChannel := <-orderChannel
-	executeOrder(configFromChannel)
+func worker(orderStruct Config, orderChannel chan int) {
 	for {
 		select {
 		case order := <-orderChannel:
-			if order.Action == Stop {
+			if order == Stop {
 				break
-			} else if order.Action == 2 {
-				configFromChannel = order
+			} else if order == Restart {
+				executeOrders(orderStruct.Conditions)
 			}
-		case <-time.After(time.Duration(configFromChannel.WorkerConfig.Tick) * time.Second):
-			executeOrder(configFromChannel)
+		case <-time.After(time.Duration(orderStruct.Tick) * time.Second):
+			executeOrders(orderStruct.Conditions)
 		}
 	}
 }
 
-func executeOrder(order order) (bool, error) {
+func executeOrders(reqs []TestDefinition) {
+	for _, v := range reqs {
+		executeOrder(v)
+	}
+}
+
+func executeOrder(order TestDefinition) (bool, error) {
 	errorString := "Method unknown"
 	var response *http.Response
 	var err error
-	switch order.WorkerConfig.Method {
+	switch order.Method {
 	case http.MethodGet:
 		response, err = executeGet(order)
 	case http.MethodPut:
@@ -57,19 +57,6 @@ func executeOrder(order order) (bool, error) {
 	}
 	fmt.Println(response, err)
 	return false, errors.New(errorString)
-}
-
-func retryPostUntil200(reqDef RequestDef, resChan chan RequestResult) {
-	for i := 1; i <= reqDef.Retries; i++ {
-		resp, err := http.Post(reqDef.Url, reqDef.ContentType, bytes.NewBuffer([]byte(reqDef.Body)))
-		if err != nil {
-			if i == reqDef.Retries {
-				resChan <- RequestResult{StatusCode: resp.StatusCode, Error: err, Name: reqDef.Name}
-			}
-			continue
-		}
-		resChan <- RequestResult{StatusCode: resp.StatusCode, Error: nil, Name: reqDef.Name}
-	}
 }
 
 func executeCallBacks(requests []RequestDef) []RequestResult {

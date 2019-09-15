@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"reflect"
+	"strconv"
 	"strings"
 )
 
@@ -22,26 +23,28 @@ func selectField(jsonMap map[string]interface{}, fieldSelector FieldSelector) in
 	return tempMap[fieldSlice[len(fieldSlice)-1]]
 }
 
-func checkSuccess(conditions ConditionDef, response *http.Response) bool {
-	if !checkStatus(conditions, response) {
-		return false
+func checkSuccess(conditions TestDefinition, response *http.Response) (bool, error) {
+	if res, err := checkStatus(conditions, response); !res {
+		return false, err
 	}
 
 	return checkBody(conditions, response)
 }
 
-func checkStatus(conditions ConditionDef, response *http.Response) bool {
+func checkStatus(conditions TestDefinition, response *http.Response) (bool, error) {
 	if conditions.ExpectedStatus != response.StatusCode {
-		return false
+		return false, errors.New("wrong status code: expected " +
+			string(conditions.ExpectedStatus) +
+			" but found :" + string(response.StatusCode))
 	}
-	return true
+	return true, nil
 
 }
 
-func checkBody(conditions ConditionDef, response *http.Response) bool {
+func checkBody(conditions TestDefinition, response *http.Response) (bool, error) {
 	bodyAsString, err := readBody(response)
 	if err != nil {
-		return false
+		return false, err
 	}
 
 	dynamic := make(map[string]interface{})
@@ -51,31 +54,62 @@ func checkBody(conditions ConditionDef, response *http.Response) bool {
 	return performCheck(conditions, field)
 }
 
-func checkType(a interface{}, b reflect.Type) bool {
-	return reflect.TypeOf(a) == b
+func checkType(a interface{}, b reflect.Type) (bool, error) {
+	if reflect.TypeOf(a) == b {
+		return true, nil
+	} else {
+		return false, errors.New("type mismatch : object is :" +
+			reflect.TypeOf(a).String() + " but expected : " + b.String())
+	}
 }
 
-func checkString(actual, expected string) bool {
-	return actual == expected
+func checkString(actual, expected string) (bool, error) {
+	if actual != expected {
+		return false, errors.New("Wrong result: found : " +
+			actual +
+			" while expecting :" + expected)
+	}
+	return true, nil
 }
 
-func checkInt(actual, expected int) bool {
-	return actual == expected
+func checkInt(actual, expected int) (bool, error) {
+	if actual != expected {
+		return false, errors.New("Wrong result: found : " +
+			strconv.FormatInt(int64(actual), 10) +
+			" while expecting :" + strconv.FormatInt(int64(expected), 10))
+	}
+	return true, nil
 }
 
-func checkNumber(actual, expected float64) bool {
-	return actual == expected
+func checkNumber(actual, expected float64) (bool, error) {
+	if actual != expected {
+		return false, errors.New("Wrong result: found : " +
+			strconv.FormatFloat(actual, 'f', -1, 64) +
+			" while expecting :" + strconv.FormatFloat(expected, 'f', -1, 64))
+	}
+	return true, nil
 }
 
-func checkBool(actual, expected bool) bool {
-	return actual == expected
+func checkBool(actual, expected bool) (bool, error) {
+
+	if actual != expected {
+		return false, errors.New("Wrong result: found : " +
+			strconv.FormatBool(actual) +
+			" while expecting :" + strconv.FormatBool(expected))
+	}
+	return true, nil
 }
 
-func checkLength(slice []interface{}, expectedSize int) bool {
-	return len(slice) == expectedSize
+func checkLength(slice []interface{}, expectedSize int) (bool, error) {
+	if len(slice) != expectedSize {
+		return false, errors.New("Wrong size :" +
+			string(len(slice)) +
+			" while expecting :" + string(expectedSize))
+	}
+	return true, nil
 }
 
-func performCheck(condition ConditionDef, object interface{}) bool {
+func performCheck(condition TestDefinition, object interface{}) (bool, error) {
 	switch condition.ExpectedType {
 	case "int":
 		return checkInt(object.(int), condition.ExpectedInt)
@@ -86,12 +120,12 @@ func performCheck(condition ConditionDef, object interface{}) bool {
 	case "type":
 		reflectedType, err := typeFromString(condition.ExpectedType)
 		if err != nil {
-			return false
+			return false, err
 		}
 		return checkType(object, reflectedType)
 
 	}
-	return false
+	return false, errors.New("unknow check operation")
 }
 
 func typeFromString(typeAsString string) (reflect.Type, error) {
