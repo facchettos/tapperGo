@@ -2,6 +2,7 @@ package gotapper
 
 import (
 	"bytes"
+	"io/ioutil"
 	"net/http"
 )
 
@@ -39,4 +40,12 @@ func executeRequest(order order) (*http.Response, error) {
 	}
 	resp, err := client.Do(req)
 	return resp, nil
+}
+
+func readBody(resp *http.Response) (string, error) {
+	res, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
+	return string(res), nil
 }

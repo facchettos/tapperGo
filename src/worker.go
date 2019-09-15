@@ -2,6 +2,7 @@ package gotapper
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -84,39 +85,4 @@ func executeCallBacks(requests []RequestDef) []RequestResult {
 	}
 
 	return resultSlice
-}
-
-func selectField(jsonMap map[string]interface{}, selector, separator string) interface{} {
-	fieldSlice := strings.Split(selector, separator)
-	tempMap := jsonMap
-	for _, v := range fieldSlice {
-		nodeType := reflect.ValueOf(jsonMap[v])
-		if nodeType.Kind() != reflect.Map {
-			break
-		}
-		tempMap = tempMap[v].(map[string]interface{})
-	}
-
-	return tempMap[fieldSlice[len(fieldSlice)-1]]
-}
-
-func checkSuccess(conditions ConditionDef, response *http.Response) bool {
-	if !checkStatus(conditions, response) {
-		return false
-	}
-	//TODO finish the function
-	return false
-}
-
-func checkStatus(conditions ConditionDef, response *http.Response) bool {
-	if conditions.ExpectedStatus != response.StatusCode {
-		return false
-	}
-	return true
-
-}
-
-func checkBody(conditions ConditionDef, response *http.Response, expected interface{}) bool {
-
-	return true
 }
