@@ -8,6 +8,7 @@ type Config struct {
 	Method              string            `yaml:"method"`
 	ContentType         string            `yaml:"content_type"`
 	Body                string            `yaml:"body"`
+	Conditions          []ConditionDef    `yaml:"conditions"`
 	CallBackUrlsSuccess []RequestDef      `yaml:"call_back_urls"`
 	CallBackUrlsFailure []RequestDef      `yaml:"call_back_urls_failure"`
 }
@@ -27,7 +28,6 @@ type RequestResult struct {
 }
 
 type ConditionDef struct {
-	Condition      string        `yaml:"condition"`
 	FieldSelector  FieldSelector `yaml:"field_selector"`
 	ExpectedStatus int           `yaml:"expected_status"`
 	ExpectedType   string        `yaml:"expected_type"`
@@ -35,6 +35,7 @@ type ConditionDef struct {
 	ExpectedInt    int           `yaml:"expected_int,omitempty"`
 	ExpectedNumber float64       `yaml:"expected_float,omitempty"`
 	ExpectedBool   bool          `yaml:"expected_bool,omitempty"`
+	ExpectedLength int           `yaml:"expected_length"`
 }
 
 type FieldSelector struct {
