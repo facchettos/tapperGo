@@ -4,37 +4,45 @@ import (
 	"bytes"
 	"io/ioutil"
 	"net/http"
+	"time"
 )
 
-func createUrlFromOrder(order order) string {
-	return order.WorkerConfig.URL
+func createClient(config Config) http.Client {
+	return http.Client{
+		Timeout: time.Duration(config.Conditions[0].ExpectedDuration) * time.Second,
+	}
 }
 
-func executeGet(order order) (*http.Response, error) {
-	effectiveUrl := createUrlFromOrder(order)
+func createUrlFromOrder(order Config) string {
+	return order.URL
+}
 
-	resp, err := http.Get(effectiveUrl)
+func executeGet(order Config) (*http.Response, error) {
+	effectiveUrl := createUrlFromOrder(order)
+	client := createClient(order)
+	resp, err := client.Get(effectiveUrl)
 	return resp, err
 }
 
-func executePost(order order) (*http.Response, error) {
+func executePost(order Config) (*http.Response, error) {
 	effectiveUrl := createUrlFromOrder(order)
 
-	postBody := bytes.NewBuffer([]byte(order.WorkerConfig.Body))
-	resp, err := http.Post(effectiveUrl, order.WorkerConfig.ContentType, postBody)
+	client := createClient(order)
+	postBody := bytes.NewBuffer([]byte(order.Body))
+	resp, err := client.Post(effectiveUrl, order.ContentType, postBody)
 	return resp, err
 }
 
-func executeRequest(order order) (*http.Response, error) {
-	client := &http.Client{}
+func executeRequest(order Config) (*http.Response, error) {
+	client := createClient(order)
 	effectiveUrl := createUrlFromOrder(order)
-	method := order.WorkerConfig.Method
+	method := order.Method
 	var reqBody *bytes.Buffer
 	if method == http.MethodPut || method == http.MethodPost {
-		reqBody = bytes.NewBuffer([]byte(order.WorkerConfig.Body))
+		reqBody = bytes.NewBuffer([]byte(order.Body))
 
 	}
-	req, err := http.NewRequest(order.WorkerConfig.Method, effectiveUrl, reqBody)
+	req, err := http.NewRequest(order.Method, effectiveUrl, reqBody)
 	if err != nil {
 		return nil, err
 	}
@@ -48,4 +56,18 @@ func readBody(resp *http.Response) (string, error) {
 		return "", err
 	}
 	return string(res), nil
+}
+
+//this is for the callbacks
+func retryPostUntil200(reqDef RequestDef, resChan chan RequestResult) {
+	for i := 1; i <= reqDef.Retries; i++ {
+		resp, err := http.Post(reqDef.Url, reqDef.ContentType, bytes.NewBuffer([]byte(reqDef.Body)))
+		if err != nil {
+			if i == reqDef.Retries {
+				resChan <- RequestResult{StatusCode: resp.StatusCode, Error: err, Name: reqDef.Name}
+			}
+			continue
+		}
+		resChan <- RequestResult{StatusCode: resp.StatusCode, Error: nil, Name: reqDef.Name}
+	}
 }
