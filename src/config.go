@@ -37,6 +37,8 @@ type TestDefinition struct {
 	ExpectedBool     bool              `yaml:"expected_bool,omitempty"`
 	ExpectedLength   int               `yaml:"expected_length.omitenpty"`
 	ExpectedDuration int               `yaml:"expected_duration,omitempty"`
+	SleepBefore      int               `yaml:"sleep_before,omitempty"`
+	SleepAfter       int               `yaml:"sleep_after,omitempty"`
 }
 
 type FieldSelector struct {

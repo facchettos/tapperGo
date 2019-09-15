@@ -19,24 +19,42 @@ type order struct {
 }
 
 func worker(orderStruct Config, orderChannel chan int) {
+	var err error
 	for {
+		err = nil
 		select {
 		case order := <-orderChannel:
 			if order == Stop {
 				break
 			} else if order == Restart {
-				executeOrders(orderStruct.Conditions)
+				err = executeOrders(orderStruct.Conditions)
+
 			}
 		case <-time.After(time.Duration(orderStruct.Tick) * time.Second):
-			executeOrders(orderStruct.Conditions)
+			err = executeOrders(orderStruct.Conditions)
 		}
+		executeCallBacksFromStatus(orderStruct, err)
 	}
 }
 
-func executeOrders(reqs []TestDefinition) {
-	for _, v := range reqs {
-		executeOrder(v)
+func executeCallBacksFromStatus(order Config, err error) {
+	if err != nil {
+		executeCallBacks(order.CallBackUrlsFailure)
+	} else {
+		executeCallBacks(order.CallBackUrlsSuccess)
 	}
+}
+
+func executeOrders(reqs []TestDefinition) error {
+	for _, v := range reqs {
+		time.Sleep(time.Duration(v.SleepBefore) * time.Second)
+		_, err := executeOrder(v)
+		if err != nil {
+			return err
+		}
+		time.Sleep(time.Duration(v.SleepAfter) * time.Second)
+	}
+	return nil
 }
 
 func executeOrder(order TestDefinition) (bool, error) {
