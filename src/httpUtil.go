@@ -23,7 +23,7 @@ func createUrlFromOrder(order TestDefinition) string {
 	length := len(order.Arguments)
 	for k, v := range order.Arguments {
 		builder.WriteString(k + "=" + v)
-		if counter != length-1 {
+		if counter < length {
 			builder.WriteString("&")
 		}
 		counter++
